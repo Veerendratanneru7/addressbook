@@ -2,7 +2,7 @@ pipeline{
     agent none
     tools{
         jdk 'myjava'
-        maven 'mymaven'
+        maven 'mvn'
     }
     environment{
         NEW_VERSION='1.4.0'
