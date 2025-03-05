@@ -10,6 +10,9 @@ pool:
   name: GeoRisk_AWS_LZ
 
 steps:
+- script: npm run clean
+  displayName: 'Clean Build Artifacts'
+
 - task: SonarQubePrepare@4
   displayName: 'Prepare analysis on SonarQube'
   inputs:
