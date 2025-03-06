@@ -1,0 +1,81 @@
+trigger: 
+  branches:
+    include: 
+      - test
+        
+variables:
+  - group: GeoRiskMaps_Test_build
+
+pool:
+  name: GeoRisk_AWS_LZ
+
+steps:
+- script: npm run clean
+  displayName: 'Clean Build Artifacts'
+
+- task: SonarQubePrepare@4
+  env:
+    NX_SKIP_CACHE: true
+  displayName: 'Prepare analysis on SonarQube'
+  inputs:
+    SonarQube: 'SonarQube_Service'
+    scannerMode: CLI
+    configMode: manual
+    cliProjectKey: GeoRiskMaps
+    cliProjectName: GeoRiskMaps
+    cliProjectVersion: '$(Build.BuildNumber)'
+    cliSources: 'packages\maps-ui\src'
+    extraProperties: |
+     # Additional properties that will be passed to the scanner, 
+     # Put one key=value per line, example:
+     # sonar.exclusions=**/*.bin
+     sonar.ts.tsconfigPath=packages/maps-ui/tsconfig.base.json
+     sonar.language=ts
+     sonar.exclusions=**/*.spec.ts, **/*.module.ts, **/*.routes.ts, **/*.main.ts , **/*.setupJest.ts, **/*.environment.*.ts, **/*.popup.service.ts, **/*.map-sync.service.ts, **/.nx/**
+     sonar.javascript.lcov.reportPaths=coverage/packages/maps-ui/lcov.info
+     sonar.testExecutionReportPaths=testResults/sonar-report.xml 
+     sonar.tests=packages\maps-ui\src
+     sonar.test.inclusions=**/*.spec.ts
+     sonar.branch.name=$(Build.SourceBranchName)
+     sonar.coverage.exclusions=**/.nx/**
+     sonar.inclusions=packages/maps-ui/**
+
+- task: UseNode@1
+  inputs:
+    version: '18.19.1'
+  displayName: 'Use Node 18.19.1'
+
+
+
+- task: Npm@0
+  displayName: 'npm ci'
+  inputs:
+    command: ci
+
+- task: Npm@0
+  displayName: 'npm build'
+  inputs:
+    command: run
+    arguments: 'build-maps'
+    
+- task: Npm@0
+  displayName: Test
+  inputs:
+    command: run
+    arguments: 'test-coverage'
+  continueOnError: true
+
+
+- task: SonarQubeAnalyze@4
+  displayName: 'Run Code Analysis'
+  continueOnError: true
+  
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish Artifact: GeoRisk.Maps'
+  inputs:
+    PathtoPublish: '$(Build.SourcesDirectory)\dist'
+    ArtifactName: '$(Build.Repository.Name)-StaticBuild'
+
+- task: SonarQubePublish@4
+  displayName: 'Publish Quality Gate Result'
+  continueOnError: true
