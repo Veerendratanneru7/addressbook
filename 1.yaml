@@ -1,6 +1,31 @@
+trigger:
+  branches:
+    include:
+      - test
+
+variables:
+  - group: GeoRiskMaps_Test_build
+
+pool:
+  name: GeoRisk_AWS_LZ
+
+- script: |
+    echo "Copying tsconfig.base.json to a temporary location"
+    mkdir $(Build.SourcesDirectory)/.scannerwork/temp
+    copy $(Build.SourcesDirectory)/tsconfig.base.json $(Build.SourcesDirectory)/.scannerwork/temp/tsconfig.base.json
+    dir $(Build.SourcesDirectory)/.scannerwork/temp/tsconfig.base.json || echo "Copy failed"
+  displayName: 'Copy tsconfig.base.json to Temp Location'
+
+- script: |
+    echo "Current directory: $(pwd)"
+    dir $(Build.SourcesDirectory)
+    dir $(Build.SourcesDirectory)/tsconfig.base.json || echo "tsconfig.base.json not found in root"
+    dir $(Build.SourcesDirectory)/.scannerwork/temp/tsconfig.base.json || echo "tsconfig.base.json not found in temp"
+  displayName: 'Debug Working Directory and File Presence'
+
 - task: SonarQubePrepare@4
   env:
-    NX_SKIP_CACHE: true 
+    NX_SKIP_CACHE: true
   displayName: 'Prepare analysis on SonarQube'
   inputs:
     SonarQube: 'SonarQube_Service'
@@ -11,7 +36,7 @@
     cliProjectVersion: '$(Build.BuildNumber)'
     cliSources: 'packages\maps-ui\src'
     extraProperties: |
-      sonar.ts.tsconfigPath=$(Build.SourcesDirectory)/tsconfig.base.json
+      sonar.ts.tsconfigPath=$(Build.SourcesDirectory)/.scannerwork/temp/tsconfig.base.json  # Point to temp copy
       sonar.language=ts
       sonar.exclusions=**/*.spec.ts, **/*.module.ts, **/*.routes.ts, **/*.main.ts, **/*.setupJest.ts, **/*.environment.*.ts, **/*.popup.service.ts, **/*.map-sync.service.ts, **/.nx/**
       sonar.javascript.lcov.reportPaths=coverage/packages/maps-ui/lcov.info
@@ -22,8 +47,41 @@
       sonar.coverage.exclusions=**/.nx/**
       sonar.inclusions=packages/maps-ui/**
 
+- task: UseNode@1
+  inputs:
+    version: '18.19.1'
+  displayName: 'Use Node 18.19.1'
+
+- task: Npm@0
+  displayName: 'npm ci'
+  inputs:
+    command: ci
+
+- task: Npm@0
+  displayName: 'npm build'
+  inputs:
+    command: run
+    arguments: 'build-maps'
+
+- task: Npm@0
+  displayName: 'Test'
+  inputs:
+    command: run
+    arguments: 'test-coverage'
+  continueOnError: true
+
 - task: SonarQubeAnalyze@4
   env:
-    NX_SKIP_CACHE: true 
+    NX_SKIP_CACHE: true
   displayName: 'Run Code Analysis'
+  continueOnError: true
+
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish Artifact: GeoRisk.Maps'
+  inputs:
+    PathtoPublish: '$(Build.SourcesDirectory)\dist'
+    ArtifactName: '$(Build.Repository.Name)-StaticBuild'
+
+- task: SonarQubePublish@4
+  displayName: 'Publish Quality Gate Result'
   continueOnError: true
