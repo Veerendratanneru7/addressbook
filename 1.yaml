@@ -1,20 +1,17 @@
-trigger:
+trigger: 
   branches:
-    include:
+    include: 
       - test
-
+        
 variables:
   - group: GeoRiskMaps_Test_build
 
 pool:
   name: GeoRisk_AWS_LZ
 
-- script: |
-    echo Current directory: %CD%
-    dir "$(Build.SourcesDirectory)\tsconfig.base.json" || echo tsconfig.base.json not found
-  displayName: 'Verify tsconfig.base.json'
 
-- task: SonarQubePrepare@4
+steps:
+- task: SonarQubePrepare@7
   env:
     NX_SKIP_CACHE: true
   displayName: 'Prepare analysis on SonarQube'
@@ -27,21 +24,26 @@ pool:
     cliProjectVersion: '$(Build.BuildNumber)'
     cliSources: 'packages\maps-ui\src'
     extraProperties: |
-      sonar.ts.tsconfigPath=$(Build.SourcesDirectory)\tsconfig.base.json 
-      sonar.language=ts
-      sonar.exclusions=**/*.spec.ts, **/*.module.ts, **/*.routes.ts, **/*.main.ts, **/*.setupJest.ts, **/*.environment.*.ts, **/*.popup.service.ts, **/*.map-sync.service.ts, **/.nx/**
-      sonar.javascript.lcov.reportPaths=coverage/packages/maps-ui/lcov.info
-      sonar.testExecutionReportPaths=testResults/sonar-report.xml 
-      sonar.tests=packages\maps-ui\src
-      sonar.test.inclusions=**/*.spec.ts
-      sonar.branch.name=$(Build.SourceBranchName)
-      sonar.coverage.exclusions=**/.nx/**
-      sonar.inclusions=packages/maps-ui/**
+     # Additional properties that will be passed to the scanner, 
+     # Put one key=value per line, example:
+     # sonar.exclusions=**/*.bin
+     sonar.ts.tsconfigpath=tsconfig.base.json  
+     sonar.language=ts
+     sonar.exclusions=**/*.spec.ts, **/*.module.ts, **/*.routes.ts, **/*.main.ts , **/*.setupJest.ts, **/*.environment.*.ts, **/*.popup.service.ts, **/*.map-sync.service.ts,**/.nx/**
+     sonar.javascript.lcov.reportPaths=coverage/packages/maps-ui/lcov.info
+     sonar.testExecutionReportPaths=testResults/sonar-report.xml 
+     sonar.tests=packages\maps-ui\src
+     sonar.test.inclusions=**/*.spec.ts
+     sonar.branch.name=$(Build.SourceBranchName)
+     sonar.coverage.exclusions=**/.nx/**
+     sonar.inclusions=packages/maps-ui/**
 
 - task: UseNode@1
   inputs:
     version: '18.19.1'
   displayName: 'Use Node 18.19.1'
+
+
 
 - task: Npm@0
   displayName: 'npm ci'
@@ -53,26 +55,29 @@ pool:
   inputs:
     command: run
     arguments: 'build-maps'
-
+    
 - task: Npm@0
-  displayName: 'Test'
+  displayName: Test
   inputs:
     command: run
     arguments: 'test-coverage'
   continueOnError: true
 
-- task: SonarQubeAnalyze@4
+- task: SonarQubeAnalyze@7
   env:
-    NX_SKIP_CACHE: true
+    NX_SKIP-CACHE: true
   displayName: 'Run Code Analysis'
   continueOnError: true
-
+  
 - task: PublishBuildArtifacts@1
   displayName: 'Publish Artifact: GeoRisk.Maps'
   inputs:
     PathtoPublish: '$(Build.SourcesDirectory)\dist'
     ArtifactName: '$(Build.Repository.Name)-StaticBuild'
 
-- task: SonarQubePublish@4
+- task: SonarQubePublish@7
   displayName: 'Publish Quality Gate Result'
   continueOnError: true
+
+
+  
