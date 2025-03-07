@@ -10,18 +10,9 @@ pool:
   name: GeoRisk_AWS_LZ
 
 - script: |
-    echo Copying tsconfig.base.json to a temporary location
-    mkdir "$(Build.SourcesDirectory)\.scannerwork\temp" 2>nul || echo Directory already exists
-    copy "$(Build.SourcesDirectory)\tsconfig.base.json" "$(Build.SourcesDirectory)\.scannerwork\temp\tsconfig.base.json"
-    dir "$(Build.SourcesDirectory)\.scannerwork\temp\tsconfig.base.json" || echo Copy failed
-  displayName: 'Copy tsconfig.base.json to Temp Location'
-
-- script: |
     echo Current directory: %CD%
-    dir "$(Build.SourcesDirectory)" || echo Root directory not found
-    dir "$(Build.SourcesDirectory)\tsconfig.base.json" || echo tsconfig.base.json not found in root
-    dir "$(Build.SourcesDirectory)\.scannerwork\temp\tsconfig.base.json" || echo tsconfig.base.json not found in temp
-  displayName: 'Debug Working Directory and File Presence'
+    dir "$(Build.SourcesDirectory)\tsconfig.base.json" || echo tsconfig.base.json not found
+  displayName: 'Verify tsconfig.base.json'
 
 - task: SonarQubePrepare@4
   env:
@@ -36,7 +27,7 @@ pool:
     cliProjectVersion: '$(Build.BuildNumber)'
     cliSources: 'packages\maps-ui\src'
     extraProperties: |
-      sonar.ts.tsconfigPath=$(Build.SourcesDirectory)\.scannerwork\temp\tsconfig.base.json 
+      sonar.ts.tsconfigPath=$(Build.SourcesDirectory)\tsconfig.base.json 
       sonar.language=ts
       sonar.exclusions=**/*.spec.ts, **/*.module.ts, **/*.routes.ts, **/*.main.ts, **/*.setupJest.ts, **/*.environment.*.ts, **/*.popup.service.ts, **/*.map-sync.service.ts, **/.nx/**
       sonar.javascript.lcov.reportPaths=coverage/packages/maps-ui/lcov.info
