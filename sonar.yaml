@@ -1,0 +1,89 @@
+trigger: 
+  branches:
+    include: 
+      - test
+        
+variables:
+  - group: GeoRiskMaps_Test_build
+
+pool:
+  name: GeoRisk_AWS_LZ
+
+steps:
+- task: SonarQubePrepare@7
+  env:
+    NX_SKIP_CACHE: true
+  displayName: 'Prepare analysis on SonarQube'
+  inputs:
+    SonarQube: 'SonarQube_Service'
+    scannerMode: CLI
+    configMode: manual
+    cliProjectKey: GeoRiskMaps
+    cliProjectName: GeoRiskMaps
+    cliProjectVersion: '$(Build.BuildNumber)'
+    cliSources: 'packages\maps-ui\src'
+    extraProperties: |
+      sonar.ts.tsconfigpath=packages/maps-ui/tsconfig.base.json  
+      sonar.language=ts
+      sonar.exclusions=**/*.spec.ts, **/*.module.ts, **/*.routes.ts, **/*.main.ts , **/*.setupJest.ts, **/*.environment.*.ts, **/*.popup.service.ts, **/*.map-sync.service.ts,**/.nx/**
+      sonar.javascript.lcov.reportPaths=coverage/packages/maps-ui/lcov.info
+      sonar.testExecutionReportPaths=testResults/sonar-report.xml 
+      sonar.tests=packages\maps-ui\src
+      sonar.test.inclusions=**/*.spec.ts
+      sonar.branch.name=$(Build.SourceBranchName)
+      sonar.coverage.exclusions=**/.nx/**
+      sonar.inclusions=packages/maps-ui/**
+
+# Ensure correct Node.js version
+- task: UseNode@1
+  inputs:
+    version: '18.19.1'
+  displayName: 'Use Node 18.19.1'
+
+# Reset NX cache before build
+- script: npx nx reset
+  displayName: 'Reset NX Cache'
+
+# Install dependencies
+- task: Npm@0
+  displayName: 'npm ci'
+  inputs:
+    command: ci
+
+# Rebuild NX cache
+- script: npx nx run-many --target=build --all
+  displayName: 'Rebuild NX Cache'
+
+# Build application
+- task: Npm@0
+  displayName: 'npm build'
+  inputs:
+    command: run
+    arguments: 'build-maps'
+    
+# Run tests with coverage
+- task: Npm@0
+  displayName: Test
+  inputs:
+    command: run
+    arguments: 'test-coverage'
+  continueOnError: true
+
+# SonarQube analysis
+- task: SonarQubeAnalyze@7
+  env:
+    NX_SKIP_CACHE: true  # Fixed typo
+  displayName: 'Run Code Analysis'
+  continueOnError: true
+
+# Publish build artifacts
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish Artifact: GeoRisk.Maps'
+  inputs:
+    PathtoPublish: '$(Build.SourcesDirectory)\dist'
+    ArtifactName: '$(Build.Repository.Name)-StaticBuild'
+
+# Publish SonarQube quality gate results
+- task: SonarQubePublish@7
+  displayName: 'Publish Quality Gate Result'
+  continueOnError: true
