@@ -5,7 +5,6 @@ trigger:
 pool:
   name: GeoRisk_AWS_LZ
 
-
 steps:
 - powershell: |
     $smtpServer = "hybrid.sts.rsagroup.com"
@@ -48,7 +47,9 @@ steps:
     msg.set_content(body)
 
     with smtplib.SMTP(smtp_server, smtp_port) as smtp:
+        smtp.starttls()  # If SSL is required
         smtp.send_message(msg)
 
     print("Test email sent successfully.")
   displayName: 'Send Test Email via SMTP (Python)'
+  workingDirectory: $(System.DefaultWorkingDirectory)
