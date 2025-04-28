@@ -150,7 +150,7 @@ stages:
           targetType: 'inline'
           script: |
              mkdir "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack"
-              mkdir "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack\Upgrade\$(releaseno).0"
+              mkdir "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack\Upgrade"
 
               Copy-Item "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\*.*" "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack"
               Copy-Item "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\DbUp" "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack" -Recurse
@@ -216,7 +216,7 @@ stages:
           targetType: 'inline'
           script: |
               mkdir '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack'
-              mkdir '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack\Upgrade\$(releaseno).0'
+              mkdir '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack\Upgrade'
               Copy-Item '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\*.*' '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack'
               Copy-Item '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\DbUp' '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack' -Recurse
               Copy-Item '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\Logs' '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack' -Recurse
