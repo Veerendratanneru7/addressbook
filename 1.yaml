@@ -164,6 +164,13 @@ stages:
               else {
                 Write-Host "Upgrade folder $upgradePath does not exist. Skipping copy."
                 New-Item -Path $upgradePath -ItemType Directory | Out-Null
+                $items = Get-ChildItem -Path $upgradePath
+                if ($items.Count -gt 0) {
+                    Write-Host "Contents of the directory:"
+                    $items | ForEach-Object { Write-Host $_.Name }
+                } else {
+                    Write-Host "The directory is empty."
+                }
                 Copy-Item "$upgradePath\*.*" "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack\Upgrade" -Recurse
               }
 
@@ -187,6 +194,7 @@ stages:
           script: |
               mkdir '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\pack'
               mkdir '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\pack\Upgrade\$(releaseno).0'
+              New-Item -Path $sourcePath -ItemType Directory | Out-Null
               Copy-Item '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\*.*' '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\pack'
               Copy-Item '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\DbUp' '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\pack' -Recurse
               Copy-Item '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\Logs' '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\pack' -Recurse
