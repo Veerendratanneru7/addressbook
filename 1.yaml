@@ -1,55 +1,19 @@
-name: pipeline-smtp-check
-trigger:
-- none 
+mkdir "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack"
+mkdir "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack\Upgrade"
 
-pool:
-  name: GeoRisk_AWS_LZ
+Copy-Item "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\*.*" "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack"
+Copy-Item "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\DbUp" "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack" -Recurse
+Copy-Item "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\Logs" "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack" -Recurse
+Copy-Item "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\bin\$(buildConfiguration)\*.*" "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack" -Recurse
 
-steps:
-- powershell: |
-    $smtpServer = "hybrid.sts.rsagroup.com"
-    $smtpPort = "25"  
+$upgradePath = "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\Upgrade\$(releaseno).0"
+if (Test-Path $upgradePath) {
+  Copy-Item "$upgradePath\*.*" "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack\Upgrade" -Recurse
+}
+else {
+  Write-Host "Upgrade folder $upgradePath does not exist. Skipping copy."
+}
 
-    $recipient = "chethana.maidam@uk.rsagroup.com"
-    $subject = "Test Email from Azure DevOps"
-    $sender = "chethana.maidam@uk.rsagroup.com"
-    $body = "This is a test email sent from an Azure DevOps pipeline."
-
-    $message = New-Object System.Net.Mail.MailMessage($sender, $recipient, $subject, $body)
-
-    $smtp = New-Object System.Net.Mail.SmtpClient($smtpServer, $smtpPort)
-    $smtp.EnableSsl = $true 
-
-    $smtp.Send($message)
-    Write-Host "Test email sent successfully."
-  displayName: 'Send Test Email via SMTP (PowerShell)'
-
-- task: UsePythonVersion@0
-  inputs:
-    versionSpec: '3.9'
-
-- script: |
-    import smtplib
-    from email.message import EmailMessage
-
-    smtp_server = "hybrid.sts.rsagroup.com"
-    smtp_port = 25
-
-    sender = "chethana.maidam@uk.rsagroup.com"
-    recipient = "chethana.maidam@uk.rsagroup.com"
-    subject = "Test Email from Azure DevOps"
-    body = "This is a test email sent from an Azure DevOps pipeline using Python."
-
-    msg = EmailMessage()
-    msg['From'] = sender
-    msg['To'] = recipient
-    msg['Subject'] = subject
-    msg.set_content(body)
-
-    with smtplib.SMTP(smtp_server, smtp_port) as smtp:
-        smtp.starttls()  # If SSL is required
-        smtp.send_message(msg)
-
-    print("Test email sent successfully.")
-  displayName: 'Send Test Email via SMTP (Python)'
-  workingDirectory: $(System.DefaultWorkingDirectory)
+Remove-Item "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack\*.cs" -Recurse -Force
+Remove-Item "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack\*.csproj" -Recurse -Force
+Remove-Item "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack\*.csproj.vspscc" -Recurse -Force
