@@ -1,19 +1,300 @@
-mkdir "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack"
-mkdir "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack\Upgrade"
+# ASP.NET
+# Build and test ASP.NET projects.
+# Add steps that publish symbols, save build artifacts, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/apps/aspnet/build-aspnet-4
 
-Copy-Item "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\*.*" "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack"
-Copy-Item "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\DbUp" "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack" -Recurse
-Copy-Item "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\Logs" "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack" -Recurse
-Copy-Item "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\bin\$(buildConfiguration)\*.*" "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack" -Recurse
+trigger:
+- None
+name: '1.0.$(Rev:r)'
 
-$upgradePath = "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\Upgrade\$(releaseno).0"
-if (Test-Path $upgradePath) {
-  Copy-Item "$upgradePath\*.*" "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack\Upgrade" -Recurse
-}
-else {
-  Write-Host "Upgrade folder $upgradePath does not exist. Skipping copy."
-}
+pool: 'AWS_LZ_CQE_AgentPool_Win'
 
-Remove-Item "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack\*.cs" -Recurse -Force
-Remove-Item "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack\*.csproj" -Recurse -Force
-Remove-Item "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack\*.csproj.vspscc" -Recurse -Force
+variables:
+- name: solution
+  value: '**/RSA.sln'
+- name: buildPlatform
+  value: 'Any CPU'
+- name: buildConfiguration
+  value: 'Release'
+- group: 'CQE-VG'
+
+stages:
+- stage: CI
+  jobs:
+  - job: Build
+    timeoutInMinutes: 180
+    steps:
+    - task: NuGetToolInstaller@1
+
+    - task: NuGetCommand@2
+      inputs:
+        command: 'restore'
+        restoreSolution: '$(solution)'
+        feedsToUse: 'config'
+        nugetConfigPath: '.\src\nuget.config'
+      displayName: 'NuGet Restore from config'
+
+    - task: NuGetCommand@2
+      inputs:
+        command: 'restore'
+        restoreSolution: '$(solution)'
+        feedsToUse: 'select'
+      displayName: 'NuGet Restore'
+
+    - task: VSBuild@1
+      inputs:
+        solution: '$(solution)'
+        vsVersion: '15.0'
+        msbuildArgs: '/p:GenerateSerializationAssemblies=Off /p:AllowedReferenceRelatedFileExtensions=.pdb'
+        platform: '$(buildPlatform)'
+        configuration: '$(buildConfiguration)'
+        clean: true
+      displayName: 'Build RSA.sln'
+
+    - task: MSBuild@1
+      inputs:
+        solution: '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\Endava.RSACQE.Database.csproj'
+        msbuildVersion: '15.0'
+        configuration: '$(buildConfiguration)'
+        msbuildArguments: '/p:GenerateSerializationAssemblies=Off /p:AllowedReferenceRelatedFileExtensions=.pdb /p:PackageLocation="$(build.artifactStagingDirectory)"'
+        clean: true
+      displayName: 'Build Endava.RSACQE.Database'
+
+    - task: ArchiveFiles@2
+      inputs:
+        rootFolderOrFile: '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.WinService\bin\Release'
+        includeRootFolder: false
+        archiveType: 'zip'
+        archiveFile: '$(Build.ArtifactStagingDirectory)/Endava.RSACQE.WinService/Endava.RSACQE.WinService.$(releaseno).$(sprintno).$(Build.BuildId).zip'
+        replaceExistingArchive: true
+      displayName: 'Archive Endava.RSACQE.WinService'
+
+    - task: ArchiveFiles@2
+      inputs:
+        rootFolderOrFile: '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Web'
+        includeRootFolder: false
+        archiveType: 'zip'
+        archiveFile: '$(Build.ArtifactStagingDirectory)/Endava.RSACQE.Web/Endava.RSACQE.Web.$(releaseno).$(sprintno).$(Build.BuildId).zip'
+        replaceExistingArchive: true
+      displayName: 'Archive Endava.RSACQE.Web'
+
+    - task: PowerShell@2
+      inputs:
+          targetType: 'inline'
+          script: |
+              mkdir $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.AppWS\pack
+              Copy-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.AppWS\*.* $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.AppWS\pack
+              Copy-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.AppWS\bin $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.AppWS\pack -Recurse
+              Copy-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.AppWS\Configs $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.AppWS\pack -Recurse
+              Copy-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.AppWS\WCFServices $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.AppWS\pack -Recurse
+              Remove-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.AppWS\pack\*.cs -Recurse -Force
+              Remove-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.AppWS\pack\*.csproj -Recurse -Force
+              Remove-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.AppWS\pack\*.csproj.vspscc -Recurse -Force
+      displayName: 'Copy Endava.RSACQE.AppWS'
+
+    - task: ArchiveFiles@2
+      inputs:
+        rootFolderOrFile: '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.AppWS\pack'
+        includeRootFolder: false
+        archiveType: 'zip'
+        archiveFile: '$(Build.ArtifactStagingDirectory)/Endava.RSACQE.AppWS/Endava.RSACQE.AppWS.$(releaseno).$(sprintno).$(Build.BuildId).zip'
+        replaceExistingArchive: true
+      displayName: 'Archive Endava.RSACQE.AppWS'
+
+    - task: PowerShell@2
+      inputs:
+          targetType: 'inline'
+          script: |
+              mkdir '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.SL\pack'
+              Copy-Item '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.SL\*.*' '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.SL\pack'
+              Copy-Item '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.SL\bin' '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.SL\pack' -Recurse
+              Copy-Item '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.SL\Configs' '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.SL\pack' -Recurse
+              Copy-Item '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.SL\WCFServices' '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.SL\pack' -Recurse
+              Remove-Item '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.SL\pack\*.cs' -Recurse -Force
+              Remove-Item '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.SL\pack\*.csproj' -Recurse -Force
+      displayName: 'Copy Endava.RSACQE.AP.SL'
+
+    - task: ArchiveFiles@2
+      inputs:
+        rootFolderOrFile: '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.SL\pack'
+        includeRootFolder: false
+        archiveType: 'zip'
+        archiveFile: '$(Build.ArtifactStagingDirectory)/Endava.RSACQE.AP.SL/Endava.RSACQE.AP.SL.$(releaseno).$(sprintno).$(Build.BuildId).zip'
+        replaceExistingArchive: true
+      displayName: 'Archive Endava.RSACQE.AP.SL'
+
+    - task: PowerShell@2
+      inputs:
+          targetType: 'inline'
+          script: |
+              mkdir $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.SL\pack
+              Copy-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.SL\*.* $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.SL\pack
+              Copy-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.SL\bin $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.SL\pack -Recurse
+              Remove-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.SL\pack\*.cs -Recurse -Force
+              Remove-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.SL\pack\*.csproj -Recurse -Force
+              Remove-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.SL\pack\*.csproj.vspscc -Recurse -Force
+              
+      displayName: 'Copy Endava.RSACQE.Logging.SL'
+
+    - task: ArchiveFiles@2
+      inputs:
+        rootFolderOrFile: '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.SL\pack'
+        includeRootFolder: false
+        archiveType: 'zip'
+        archiveFile: '$(Build.ArtifactStagingDirectory)/Endava.RSACQE.Logging.SL/Endava.RSACQE.Logging.SL.$(releaseno).$(sprintno).$(Build.BuildId).zip'
+        replaceExistingArchive: true
+      displayName: 'Archive Endava.RSACQE.Logging.SL'
+
+    - task: PowerShell@2
+      inputs:
+          targetType: 'inline'
+          script: |
+             mkdir "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack"
+              mkdir "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack\Upgrade"
+
+              Copy-Item "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\*.*" "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack"
+              Copy-Item "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\DbUp" "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack" -Recurse
+              Copy-Item "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\Logs" "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack" -Recurse
+              Copy-Item "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\bin\$(buildConfiguration)\*.*" "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack" -Recurse
+
+              $upgradePath = "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\Upgrade\$(releaseno).0"
+              if (Test-Path $upgradePath) {
+                Copy-Item "$upgradePath\*.*" "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack\Upgrade" -Recurse
+              }
+              else {
+                Write-Host "Upgrade folder $upgradePath does not exist. Skipping copy."
+              }
+
+              Remove-Item "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack\*.cs" -Recurse -Force
+              Remove-Item "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack\*.csproj" -Recurse -Force
+              Remove-Item "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack\*.csproj.vspscc" -Recurse -Force
+      displayName: 'Copy Endava.RSACQE.Database'
+
+    - task: ArchiveFiles@2
+      inputs:
+        rootFolderOrFile: '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack'
+        includeRootFolder: false
+        archiveType: 'zip'
+        archiveFile: '$(Build.ArtifactStagingDirectory)/Endava.RSACQE.Database/Endava.RSACQE.Database.$(releaseno).$(sprintno).$(Build.BuildId).zip'
+        replaceExistingArchive: true
+      displayName: 'Archive Endava.RSACQE.Database'
+
+    - task: PowerShell@2
+      inputs:
+          targetType: 'inline'
+          script: |
+              mkdir '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\pack'
+              mkdir '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\pack\Upgrade'
+              Copy-Item '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\*.*' '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\pack'
+              Copy-Item '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\DbUp' '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\pack' -Recurse
+              Copy-Item '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\Logs' '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\pack' -Recurse
+              Copy-Item '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\bin\$(buildConfiguration)\*.*' '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\pack' -Recurse
+              Copy-Item '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\Upgrade\$(releaseno).0\*.*' '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\pack\Upgrade' -Recurse
+              Remove-Item '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\pack\*.cs' -Recurse -Force
+              Remove-Item '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\pack\*.csproj' -Recurse -Force
+      displayName: 'Copy Async Processes\Endava.RSACQE.AP.Database'
+
+    - task: ArchiveFiles@2
+      inputs:
+        rootFolderOrFile: '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\pack'
+        includeRootFolder: false
+        archiveType: 'zip'
+        archiveFile: '$(Build.ArtifactStagingDirectory)/Endava.RSACQE.AP.Database/Endava.RSACQE.AP.Database.$(releaseno).$(sprintno).$(Build.BuildId).zip'
+        replaceExistingArchive: true
+      displayName: 'Archive Endava.RSACQE.AP.Database'
+
+    - task: PowerShell@2
+      inputs:
+          targetType: 'inline'
+          script: |
+              mkdir $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack
+              mkdir $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack\Upgrade
+              Copy-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\*.* $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack
+              Copy-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\DbUp $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack -Recurse
+              Copy-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\Logs $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack -Recurse
+              Copy-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\bin\$(buildConfiguration)\*.* $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack -Recurse
+              Copy-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\Upgrade\$(releaseno).0\*.* $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack\Upgrade -Recurse
+              Remove-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack\*.cs -Recurse -Force
+              Remove-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack\*.csproj -Recurse -Force
+              Remove-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack\*.csproj.vspscc -Recurse -Force
+      displayName: 'Copy Endava.RSACQE.Notifications.Database'
+
+    - task: ArchiveFiles@2
+      inputs:
+        rootFolderOrFile: '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack'
+        includeRootFolder: false
+        archiveType: 'zip'
+        archiveFile: '$(Build.ArtifactStagingDirectory)/Endava.RSACQE.Notifications.Database/Endava.RSACQE.Notifications.Database.$(releaseno).$(sprintno).$(Build.BuildId).zip'
+        replaceExistingArchive: true
+      displayName: 'Archive Endava.RSACQE.Notifications.Database'
+
+    - task: PowerShell@2
+      inputs:
+          targetType: 'inline'
+          script: |
+              mkdir $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\pack
+              mkdir $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\pack\Upgrade
+              Copy-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\*.* $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\pack
+              Copy-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\DbUp $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\pack -Recurse
+              Copy-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\Logs $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\pack -Recurse
+              Copy-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\bin\$(buildConfiguration)\*.* $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\pack -Recurse
+              Copy-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\Upgrade\$(releaseno).0\*.* $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\pack\Upgrade -Recurse
+              Remove-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\pack\*.cs -Recurse -Force
+              Remove-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\pack\*.csproj -Recurse -Force
+              Remove-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\pack\*.csproj.vspscc -Recurse -Force
+      displayName: 'Copy Endava.RSACQE.Logging.Database'
+
+    - task: ArchiveFiles@2
+      inputs:
+        rootFolderOrFile: '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\pack'
+        includeRootFolder: false
+        archiveType: 'zip'
+        archiveFile: '$(Build.ArtifactStagingDirectory)/Endava.RSACQE.Logging.Database/Endava.RSACQE.Logging.Database.$(releaseno).$(sprintno).$(Build.BuildId).zip'
+        replaceExistingArchive: true
+      displayName: 'Archive Endava.RSACQE.Logging.Database'
+
+
+    - task: Veracode@3
+      inputs:
+        ConnectionDetailsSelection: 'Credentials'
+        apiId: '$(veracode_id)'
+        apiKey: '$(veracode_secret)'
+        veracodeAppProfile: 'CQE.NET'
+        version: '$(build.buildNumber)'
+        filepath: '$(Build.ArtifactStagingDirectory)'
+        importResults: true
+        failBuildOnPolicyFail: true
+        maximumWaitTime: '360'
+        createProfile: true
+        failBuildIfUploadAndScanBuildStepFails: true
+        optargs: '-deleteincompletescan 2'
+
+        
+==============================================================================
+Generating script.
+========================== Starting Command Output ===========================
+"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Unrestricted -Command ". 'D:\CQEAgents\ADOAgent-1\work\_temp\28056e30-68fd-4a14-8661-381b9c68951d.ps1'"
+
+
+    Directory: D:\CQEAgents\ADOAgent-1\work\10\s\src\Endava.RSACQE.Database
+
+
+Mode                LastWriteTime         Length Name                                                                  
+----                -------------         ------ ----                                                                  
+d-----        4/28/2025   2:24 PM                pack                                                                  
+
+
+    Directory: D:\CQEAgents\ADOAgent-1\work\10\s\src\Endava.RSACQE.Database\pack
+
+
+Mode                LastWriteTime         Length Name                                                                  
+----                -------------         ------ ----                                                                  
+d-----        4/28/2025   2:24 PM                Upgrade                                                               
+Copy-Item : Cannot find path 'D:\CQEAgents\ADOAgent-1\work\10\s\src\Endava.RSACQE.Database\Upgrade\48.0' because it 
+does not exist.
+At D:\CQEAgents\ADOAgent-1\work\_temp\28056e30-68fd-4a14-8661-381b9c68951d.ps1:10 char:1
++ Copy-Item D:\CQEAgents\ADOAgent-1\work\10\s\src\Endava.RSACQE.Databas ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (D:\CQEAgents\AD...se\Upgrade\48.0:String) [Copy-Item], ItemNotFoundExce 
+   ption
+    + FullyQualifiedErrorId : PathNotFound,Microsoft.PowerShell.Commands.CopyItemCommand
