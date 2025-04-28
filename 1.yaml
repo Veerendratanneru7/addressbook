@@ -150,7 +150,7 @@ stages:
           targetType: 'inline'
           script: |
              mkdir "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack"
-              mkdir "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack\Upgrade"
+              mkdir "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack\Upgrade\$(releaseno).0"
 
               Copy-Item "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\*.*" "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack"
               Copy-Item "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\DbUp" "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack" -Recurse
@@ -163,6 +163,8 @@ stages:
               }
               else {
                 Write-Host "Upgrade folder $upgradePath does not exist. Skipping copy."
+                New-Item -Path $upgradePath -ItemType Directory | Out-Null
+                Copy-Item "$upgradePath\*.*" "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack\Upgrade" -Recurse
               }
 
               Remove-Item "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Database\pack\*.cs" -Recurse -Force
@@ -184,7 +186,7 @@ stages:
           targetType: 'inline'
           script: |
               mkdir '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\pack'
-              mkdir '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\pack\Upgrade'
+              mkdir '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\pack\Upgrade\$(releaseno).0'
               Copy-Item '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\*.*' '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\pack'
               Copy-Item '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\DbUp' '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\pack' -Recurse
               Copy-Item '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\Logs' '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\pack' -Recurse
@@ -207,8 +209,8 @@ stages:
       inputs:
           targetType: 'inline'
           script: |
-              mkdir $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack
-              mkdir $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack\Upgrade
+              mkdir '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack'
+              mkdir '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack\Upgrade\$(releaseno).0'
               Copy-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\*.* $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack
               Copy-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\DbUp $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack -Recurse
               Copy-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\Logs $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack -Recurse
@@ -232,8 +234,8 @@ stages:
       inputs:
           targetType: 'inline'
           script: |
-              mkdir $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\pack
-              mkdir $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\pack\Upgrade
+              mkdir '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\pack'
+              mkdir '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\pack\Upgrade\$(releaseno).0'
               Copy-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\*.* $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\pack
               Copy-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\DbUp $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\pack -Recurse
               Copy-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\Logs $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\pack -Recurse
@@ -268,33 +270,3 @@ stages:
         createProfile: true
         failBuildIfUploadAndScanBuildStepFails: true
         optargs: '-deleteincompletescan 2'
-
-        
-==============================================================================
-Generating script.
-========================== Starting Command Output ===========================
-"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Unrestricted -Command ". 'D:\CQEAgents\ADOAgent-1\work\_temp\28056e30-68fd-4a14-8661-381b9c68951d.ps1'"
-
-
-    Directory: D:\CQEAgents\ADOAgent-1\work\10\s\src\Endava.RSACQE.Database
-
-
-Mode                LastWriteTime         Length Name                                                                  
-----                -------------         ------ ----                                                                  
-d-----        4/28/2025   2:24 PM                pack                                                                  
-
-
-    Directory: D:\CQEAgents\ADOAgent-1\work\10\s\src\Endava.RSACQE.Database\pack
-
-
-Mode                LastWriteTime         Length Name                                                                  
-----                -------------         ------ ----                                                                  
-d-----        4/28/2025   2:24 PM                Upgrade                                                               
-Copy-Item : Cannot find path 'D:\CQEAgents\ADOAgent-1\work\10\s\src\Endava.RSACQE.Database\Upgrade\48.0' because it 
-does not exist.
-At D:\CQEAgents\ADOAgent-1\work\_temp\28056e30-68fd-4a14-8661-381b9c68951d.ps1:10 char:1
-+ Copy-Item D:\CQEAgents\ADOAgent-1\work\10\s\src\Endava.RSACQE.Databas ...
-+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : ObjectNotFound: (D:\CQEAgents\AD...se\Upgrade\48.0:String) [Copy-Item], ItemNotFoundExce 
-   ption
-    + FullyQualifiedErrorId : PathNotFound,Microsoft.PowerShell.Commands.CopyItemCommand
