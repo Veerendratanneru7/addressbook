@@ -184,12 +184,20 @@ stages:
           targetType: 'inline'
           script: |
               mkdir '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\pack'
-              mkdir '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\pack\Upgrade\$(releaseno).0'
+              mkdir '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\pack\Upgrade'
               Copy-Item '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\*.*' '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\pack'
               Copy-Item '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\DbUp' '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\pack' -Recurse
               Copy-Item '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\Logs' '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\pack' -Recurse
               Copy-Item '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\bin\$(buildConfiguration)\*.*' '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\pack' -Recurse
-              Copy-Item '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\Upgrade\$(releaseno).0\*.*' '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\pack\Upgrade' -Recurse
+              
+              $upgradePath = "$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\Upgrade\$(releaseno).0"
+              if (Test-Path $upgradePath) {
+                Copy-Item "$upgradePath\*.*" "$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\pack\Upgrade" -Recurse
+              }
+              else {
+                Write-Host "Upgrade folder $upgradePath does not exist. Skipping copy."
+              }
+        
               Remove-Item '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\pack\*.cs' -Recurse -Force
               Remove-Item '$(System.DefaultWorkingDirectory)\src\Async Processes\Endava.RSACQE.AP.Database\pack\*.csproj' -Recurse -Force
       displayName: 'Copy Async Processes\Endava.RSACQE.AP.Database'
@@ -209,14 +217,22 @@ stages:
           script: |
               mkdir '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack'
               mkdir '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack\Upgrade\$(releaseno).0'
-              Copy-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\*.* $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack
-              Copy-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\DbUp $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack -Recurse
-              Copy-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\Logs $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack -Recurse
-              Copy-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\bin\$(buildConfiguration)\*.* $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack -Recurse
-              Copy-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\Upgrade\$(releaseno).0\*.* $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack\Upgrade -Recurse
-              Remove-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack\*.cs -Recurse -Force
-              Remove-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack\*.csproj -Recurse -Force
-              Remove-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack\*.csproj.vspscc -Recurse -Force
+              Copy-Item '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\*.*' '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack'
+              Copy-Item '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\DbUp' '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack' -Recurse
+              Copy-Item '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\Logs' '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack' -Recurse
+              Copy-Item '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\bin\$(buildConfiguration)\*.*' '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack' -Recurse
+              
+              $upgradePath = "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\Upgrade\$(releaseno).0"
+              if (Test-Path $upgradePath) {
+                Copy-Item "$upgradePath\*.*" "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack\Upgrade" -Recurse
+              }
+              else {
+                Write-Host "Upgrade folder $upgradePath does not exist. Skipping copy."
+              }
+        
+              Remove-Item '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack\*.cs' -Recurse -Force
+              Remove-Item '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack\*.csproj' -Recurse -Force
+              Remove-Item '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Notifications.Database\pack\*.csproj.vspscc' -Recurse -Force
       displayName: 'Copy Endava.RSACQE.Notifications.Database'
 
     - task: ArchiveFiles@2
@@ -234,14 +250,22 @@ stages:
           script: |
               mkdir '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\pack'
               mkdir '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\pack\Upgrade\$(releaseno).0'
-              Copy-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\*.* $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\pack
-              Copy-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\DbUp $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\pack -Recurse
-              Copy-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\Logs $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\pack -Recurse
-              Copy-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\bin\$(buildConfiguration)\*.* $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\pack -Recurse
-              Copy-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\Upgrade\$(releaseno).0\*.* $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\pack\Upgrade -Recurse
-              Remove-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\pack\*.cs -Recurse -Force
-              Remove-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\pack\*.csproj -Recurse -Force
-              Remove-Item $(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\pack\*.csproj.vspscc -Recurse -Force
+              Copy-Item '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\*.*' '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\pack'
+              Copy-Item '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\DbUp' '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\pack' -Recurse
+              Copy-Item '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\Logs' '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\pack' -Recurse
+              Copy-Item '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\bin\$(buildConfiguration)\*.*' '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\pack' -Recurse
+              
+              $upgradePath = "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\Upgrade\$(releaseno).0"
+              if (Test-Path $upgradePath) {
+                Copy-Item "$upgradePath\*.*" "$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\pack\Upgrade" -Recurse
+              }
+              else {
+                Write-Host "Upgrade folder $upgradePath does not exist. Skipping copy."
+              }
+        
+              Remove-Item '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\pack\*.cs' -Recurse -Force
+              Remove-Item '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\pack\*.csproj' -Recurse -Force
+              Remove-Item '$(System.DefaultWorkingDirectory)\src\Endava.RSACQE.Logging.Database\pack\*.csproj.vspscc' -Recurse -Force
       displayName: 'Copy Endava.RSACQE.Logging.Database'
 
     - task: ArchiveFiles@2
