@@ -1,37 +1,63 @@
-- task: PythonScript@0
-  inputs:
-    scriptSource: inline
-    script: |
-      import smtplib
-      from email.message import EmailMessage
-      import sys
+name: pipeline-smtp-check
 
-      try:
-          # SMTP server configuration
-          smtp_server = "hybrid.sts.rsagroup.com"
-          smtp_port = 25
+trigger:
+  - none
 
-          # Email details
-          sender = "chethana.maidam@uk.rsagroup.com"
-          recipient = "chethana.maidam@uk.rsagroup.com"
-          subject = "Test Email from Azure DevOps"
-          body = "This is a test email sent from an Azure DevOps pipeline using Python."
+pool:
+  name: GEORISK_AWS_LZ
 
-          # Create email message
-          msg = EmailMessage()
-          msg['From'] = sender
-          msg['To'] = recipient
-          msg['Subject'] = subject
-          msg.set_content(body)
+steps:
+  - powershell: |
+      $smtpServer = "hybrid.sts.rsagroup.com"
+      $smtpPort = 25
 
-          # Send email
-          with smtplib.SMTP(smtp_server, smtp_port) as smtp:
-              smtp.starttls()  # Enable TLS if required (comment out if not needed)
-              smtp.send_message(msg)
+      $recipient = "chethana.maidam@uk.rsagroup.com"
+      $subject = "Test Email from Azure DevOps"
+      $sender = "chethana.maidam@uk.rsagroup.com"
+      $body = "This is a test email sent from an Azure DevOps pipeline."
 
-          print("Test email sent successfully.")
-      except Exception as e:
-          print(f"Failed to send email: {str(e)}", file=sys.stderr)
-          sys.exit(1)  # Exit with error code to fail the pipeline
-  displayName: 'Send Test Email via SMTP (Python)'
-  workingDirectory: $(System.DefaultWorkingDirectory)
+      $message = New-Object System.Net.Mail.MailMessage($sender, $recipient, $subject, $body)
+      $smtp = New-Object System.Net.Mail.SmtpClient($smtpServer, $smtpPort)
+      $smtp.EnableSsl = $False
+
+      $smtp.Send($message)
+
+      Write-Host "Test email sent successfully."
+    displayName: 'Send Test Email via SMTP (PowerShell)'
+
+  - task: PythonScript@0
+    inputs:
+      scriptSource: inline
+      script: |
+        import smtplib
+        from email.message import EmailMessage
+        import sys
+
+        try:
+            # SMTP server configuration
+            smtp_server = "hybrid.sts.rsagroup.com"
+            smtp_port = 25
+
+            # Email details
+            sender = "chethana.maidam@uk.rsagroup.com"
+            recipient = "chethana.maidam@uk.rsagroup.com"
+            subject = "Test Email from Azure DevOps"
+            body = "This is a test email sent from an Azure DevOps pipeline using Python."
+
+            # Create email message
+            msg = EmailMessage()
+            msg['From'] = sender
+            msg['To'] = recipient
+            msg['Subject'] = subject
+            msg.set_content(body)
+
+            # Send email (no TLS, matching PowerShell setup)
+            with smtplib.SMTP(smtp_server, smtp_port) as smtp:
+                smtp.send_message(msg)
+
+            print("Test email sent successfully.")
+        except Exception as e:
+            print(f"Failed to send email: {str(e)}", file=sys.stderr)
+            sys.exit(1)  # Exit with error code to fail the pipeline
+    displayName: 'Send Test Email via SMTP (Python)'
+    workingDirectory: $(System.DefaultWorkingDirectory)
